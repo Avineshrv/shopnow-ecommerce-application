@@ -22,10 +22,11 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 
-// Define the type for a category object.
+// Updated type to match the API output
 type Category = {
-  id: string;
+  slug: string;
   name: string;
+  url: string;
 };
 
 function ProductFilters(): JSX.Element {
@@ -33,9 +34,7 @@ function ProductFilters(): JSX.Element {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // We now assume categories is an array of Category objects.
   const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -48,10 +47,8 @@ function ProductFilters(): JSX.Element {
         const response = await fetch(
           'https://dummyjson.com/products/categories'
         );
-        const data = await response.json();
-        // If the API returns strings, transform them to objects:
-        // const categoriesData = data.map((cat: string) => ({ id: cat, name: cat }))
-        // Otherwise, if data is already an array of objects, use it directly:
+        // API returns an array of objects
+        const data: Category[] = await response.json();
         setCategories(data);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -64,12 +61,6 @@ function ProductFilters(): JSX.Element {
           'https://dummyjson.com/products?limit=100'
         );
         const data = await response.json();
-        const uniqueBrands = [
-          ...new Set(
-            data.products.map((product: { brand: string }) => product.brand)
-          ),
-        ];
-        setBrands(uniqueBrands);
       } catch (error) {
         console.error('Error fetching brands:', error);
       }
@@ -86,7 +77,6 @@ function ProductFilters(): JSX.Element {
     const rating = searchParams.get('rating');
 
     if (categoryParam) {
-      // If categoryParam is a comma‑separated list of category names
       setSelectedCategories(categoryParam.split(','));
     }
 
@@ -144,11 +134,11 @@ function ProductFilters(): JSX.Element {
     setIsMobileFilterOpen(false);
   };
 
-  const handleCategoryChange = (categoryName: string) => {
+  const handleCategoryChange = (categorySlug: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryName)
-        ? prev.filter((c) => c !== categoryName)
-        : [...prev, categoryName]
+      prev.includes(categorySlug)
+        ? prev.filter((c) => c !== categorySlug)
+        : [...prev, categorySlug]
     );
   };
 
@@ -183,14 +173,17 @@ function ProductFilters(): JSX.Element {
           <AccordionContent>
             <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
               {categories.map((category) => (
-                <div key={category.id} className="flex items-center space-x-2">
+                <div
+                  key={category.slug}
+                  className="flex items-center space-x-2"
+                >
                   <Checkbox
-                    id={`category-${category.id}`}
-                    checked={selectedCategories.includes(category.name)}
-                    onCheckedChange={() => handleCategoryChange(category.name)}
+                    id={`category-${category.slug}`}
+                    checked={selectedCategories.includes(category.slug)}
+                    onCheckedChange={() => handleCategoryChange(category.slug)}
                   />
                   <Label
-                    htmlFor={`category-${category.id}`}
+                    htmlFor={`category-${category.slug}`}
                     className="capitalize text-sm cursor-pointer"
                   >
                     {category.name.replace('-', ' ')}
@@ -200,30 +193,6 @@ function ProductFilters(): JSX.Element {
             </div>
           </AccordionContent>
         </AccordionItem>
-
-        <AccordionItem value="brands">
-          <AccordionTrigger>Brands</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-              {brands.map((brand) => (
-                <div key={brand} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`brand-${brand}`}
-                    checked={selectedBrands.includes(brand)}
-                    onCheckedChange={() => handleBrandChange(brand)}
-                  />
-                  <Label
-                    htmlFor={`brand-${brand}`}
-                    className="text-sm cursor-pointer"
-                  >
-                    {brand}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
         <AccordionItem value="price">
           <AccordionTrigger>Price Range</AccordionTrigger>
           <AccordionContent>
@@ -277,7 +246,6 @@ function ProductFilters(): JSX.Element {
 
   return (
     <>
-      {/* Mobile Filter Button */}
       <div className="md:hidden mb-4">
         <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
           <SheetTrigger asChild>
@@ -296,8 +264,6 @@ function ProductFilters(): JSX.Element {
           </SheetContent>
         </Sheet>
       </div>
-
-      {/* Desktop Filters */}
       <div className="hidden md:block">
         <FiltersContent />
       </div>
